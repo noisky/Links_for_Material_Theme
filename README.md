@@ -15,7 +15,7 @@
 
 ```
 cd typecho/usr/plugins
-git clone https://github.com/HanSon/Links_for_Material_Theme.git Links
+git clone https://github.com/noisky/Links_for_Material_Theme.git Links
 ```
 
 
