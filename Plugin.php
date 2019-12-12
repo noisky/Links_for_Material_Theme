@@ -287,7 +287,7 @@ class Links_Plugin implements Typecho_Plugin_Interface
 		$db = Typecho_Db::get();
 		$prefix = $db->getPrefix();
 		$options = Typecho_Widget::widget('Widget_Options');
-		$nopic_url = Typecho_Common::url('/usr/plugins/Links/nopic.jpg', $options->siteUrl);
+		$nopic_url = Typecho_Common::url('/usr/plugins/Links/nopic.png', $options->siteUrl);
 		$sql = $db->select()->from($prefix.'links');
 		if (!isset($sort) || $sort == "") {
 			$sort = NULL;
