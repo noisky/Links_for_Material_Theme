@@ -1,18 +1,25 @@
 <?php
 /**
- * 友情链接插件
+ * 基于 Hanny 修改的友情链接插件，能适应于 Material for Typecho.
  * 
- * @package Links_for_Material_Theme
- * @author HanSon & Hanny
- * @version 1.1.1
+ * @package Links
+ * @author Noisky & Hanny
+ * @version 1.1.3
  * @dependence 14.10.10-*
- * @link http://hanc.cc
+ * @link http://www.noisky.cn
  *
  * 历史版本
+ *
+ * version 1.1.3 at 2017-11-21
+ * 修复越权漏洞
+
+ * version 1.1.2 at 2016-10-19
+ * 修复关闭插件后再次启动插件提示“数据表建立失败，友情链接插件启动失败。错误号：42S01”的错误。
+
  * version 1.1.1 at 2014-12-14
  * 修改支持Typecho 1.0
  * 修正Typecho 1.0下不能删除的BUG
- *
+
  * version 1.1.0 at 2013-12-08
  * 修改支持Typecho 0.9
 
@@ -112,7 +119,7 @@ class Links_Plugin implements Typecho_Plugin_Interface
 			return '建立友情链接数据表，插件启用成功';
 		} catch (Typecho_Db_Exception $e) {
 			$code = $e->getCode();
-			if(('Mysql' == $type && 1050 == $code) ||
+			if(('Mysql' == $type || 1050 == $code) ||
 					('SQLite' == $type && ('HY000' == $code || 1 == $code))) {
 				try {
 					$script = 'SELECT `lid`, `name`, `url`, `sort`, `image`, `description`, `user`, `order` from `' . $prefix . 'links`';
@@ -258,7 +265,7 @@ class Links_Plugin implements Typecho_Plugin_Interface
 	{
 		$options = Typecho_Widget::widget('Widget_Options');
 		if (!isset($options->plugins['activated']['Links'])) {
-			return "<a class=\"item\">友情链接插件未激活</a>";
+			return '友情链接插件未激活';
 		}
 		if (!isset($pattern) || $pattern == "" || $pattern == NULL || $pattern == "SHOW_TEXT") {
 			$pattern = "<a class=\"item\" href=\"{url}\" title=\"{title}\" target=\"_blank\">{name}</a>\n";
@@ -266,7 +273,17 @@ class Links_Plugin implements Typecho_Plugin_Interface
 			$pattern = "<a class=\"item\" href=\"{url}\" title=\"{title}\" target=\"_blank\"><img src=\"{image}\" alt=\"{name}\" /></a>\n";
 		} else if ($pattern == "SHOW_MIX") {
 			$pattern = "<a class=\"item\" href=\"{url}\" title=\"{title}\" target=\"_blank\"><img src=\"{image}\" alt=\"{name}\" /><span>{name}</span></a>\n";
-		}
+		} else if ($pattern == "MATERIAL_SHOW") {
+            $pattern = "
+                <a href=\"{url}\" target=\"_blank\" class=\"no-underline\">
+                    <div class=\"thumb\">
+                        <img width=\"200\" height=\"200\" src=\"{image}\" alt=\"{title}\">
+                    </div>
+                    <div class=\"content\">
+                        <p class=\"title\">{name}</p>
+                    </div>
+                </a>";
+        }
 		$db = Typecho_Db::get();
 		$prefix = $db->getPrefix();
 		$options = Typecho_Widget::widget('Widget_Options');
@@ -295,6 +312,7 @@ class Links_Plugin implements Typecho_Plugin_Interface
 				$pattern
 			);
 		}
+		$str = '<div class="link-box">' .$str. '</div>';
 		return $str;
 	}
 
@@ -313,6 +331,7 @@ class Links_Plugin implements Typecho_Plugin_Interface
      */
     public static function parseCallback($matches)
     {
+		$db = Typecho_Db::get();
 		$pattern = $matches[3];
 		$links_num = $matches[1];
 		$sort = $matches[2];
