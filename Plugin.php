@@ -275,7 +275,7 @@ class Links_Plugin implements Typecho_Plugin_Interface
 			$pattern = "<a class=\"item\" href=\"{url}\" title=\"{title}\" target=\"_blank\"><img src=\"{image}\" alt=\"{name}\" /><span>{name}</span></a>\n";
 		} else if ($pattern == "MATERIAL_SHOW") {
             $pattern = "
-                <a href=\"{url}\" target=\"_blank\" class=\"no-underline\">
+                <a href=\"{url}\" class=\"no-underline\" title=\"{title}\" target=\"_blank\">
                     <div class=\"thumb\">
                         <img width=\"200\" height=\"200\" src=\"{image}\" alt=\"{title}\">
                     </div>
