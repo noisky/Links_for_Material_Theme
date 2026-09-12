@@ -1,5 +1,4 @@
 <?php
-include 'common.php';
 include 'header.php';
 include 'menu.php';
 ?>
@@ -9,14 +8,52 @@ include 'menu.php';
     <div class="body container">
         <?php include 'page-title.php'; ?>
         <div class="row typecho-page-main manage-metas">
+                <?php $tab = 'settings' === $request->get('tab') ? 'settings' : 'links'; ?>
                 <div class="col-mb-12">
                     <ul class="typecho-option-tabs clearfix">
-                        <li class="current"><a href="<?php $options->adminUrl('extending.php?panel=Links%2Fmanage-links.php'); ?>"><?php _e('友情链接'); ?></a></li>
-						<li><a href=<?php $options->index('/action/links-edit?do=addhanny'); ?> title="如果你喜欢，可以点击快速添加寒泥的博客。"><?php _e('添加寒泥'); ?></a></li>
-                        <li><a href="http://www.imhan.com/archives/typecho-links/" title="查看友情链接使用帮助" target="_blank"><?php _e('帮助'); ?></a></li>
+						<li class="<?php echo 'links' === $tab ? 'current' : ''; ?>"><a href="<?php $options->adminUrl('extending.php?panel=Links%2Fmanage-links.php'); ?>"><?php _e('友情链接'); ?></a></li>
+						<li class="<?php echo 'settings' === $tab ? 'current' : ''; ?>"><a href="<?php $options->adminUrl('extending.php?panel=Links%2Fmanage-links.php&tab=settings'); ?>"><?php _e('设置'); ?></a></li>
+                        <li><a href="https://github.com/noisky/Links_for_Material_Theme" title="查看友情链接使用帮助" target="_blank"><?php _e('帮助'); ?></a></li>
                     </ul>
                 </div>
 
+                <?php if ('settings' === $tab): ?>
+                <div class="col-mb-12 col-tb-8" role="form">
+                    <?php $outputMode = Links_Plugin::getOutputMode(); ?>
+                    <h3><?php _e('显示设置'); ?></h3>
+                    <form method="post" action="<?php $security->index('/action/links-edit?do=save-settings'); ?>">
+                        <ul class="typecho-option">
+                            <li>
+                                <label class="typecho-label"><?php _e('输出排序设置'); ?></label>
+                                <p>
+                                    <label>
+                                        <input type="radio" name="outputMode" value="order"<?php if ('order' === $outputMode) echo ' checked'; ?> />
+                                        <?php _e('按照后台排序'); ?>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="outputMode" value="daily"<?php if ('daily' === $outputMode) echo ' checked'; ?> />
+                                        <?php _e('每日随机输出'); ?>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="outputMode" value="request"<?php if ('request' === $outputMode) echo ' checked'; ?> />
+                                        <?php _e('每次随机输出'); ?>
+                                    </label>
+                                </p>
+                                <p class="description">
+                                    <?php _e('按照后台排序：使用默认拖拽顺序'); ?><br>
+                                    <?php _e('每日随机输出：在当天保持顺序不变'); ?><br>
+                                    <?php _e('每次随机输出：会在每次页面生成时重新打乱顺序'); ?>
+                                </p>
+                            </li>
+                        </ul>
+                        <ul class="typecho-option typecho-option-submit">
+                            <li>
+                                <button type="submit" class="btn primary"><?php _e('保存设置'); ?></button>
+                            </li>
+                        </ul>
+                    </form>
+                </div>
+                <?php else: ?>
                 <div class="col-mb-12 col-tb-8" role="main">                  
                     <?php
 						$prefix = $db->getPrefix();
@@ -35,9 +72,10 @@ include 'menu.php';
                         </div>
                     </div>
 
-                    <div class="typecho-table-wrap">
-                        <table class="typecho-list-table">
+                    <div id="links-table-wrap" class="typecho-table-wrap">
+                        <table id="links-table" class="typecho-list-table">
                             <colgroup>
+                                <col width="54"/>
                                 <col width="20"/>
 								<col width="25%"/>
 								<col width=""/>
@@ -46,6 +84,7 @@ include 'menu.php';
                             </colgroup>
                             <thead>
                                 <tr>
+                                    <th class="links-sort-column" title="<?php _e('拖动整行调整顺序'); ?>"><?php _e('排序'); ?></th>
                                     <th> </th>
 									<th><?php _e('链接名称'); ?></th>
 									<th><?php _e('链接地址'); ?></th>
@@ -56,7 +95,8 @@ include 'menu.php';
                             <tbody>
 								<?php if(!empty($links)): $alt = 0;?>
 								<?php foreach ($links as $link): ?>
-                                <tr id="lid-<?php echo $link['lid']; ?>">
+                                <tr id="lid-<?php echo $link['lid']; ?>" title="<?php _e('拖动整行调整顺序'); ?>">
+                                    <td class="links-sort-indicator" title="<?php _e('拖动整行调整顺序'); ?>" aria-label="<?php _e('拖动整行调整顺序'); ?>">⋮⋮</td>
                                     <td><input type="checkbox" value="<?php echo $link['lid']; ?>" name="lid[]"/></td>
 									<td><a href="<?php echo $request->makeUriByRequest('lid=' . $link['lid']); ?>" title="点击编辑"><?php echo $link['name']; ?></a>
 									<td><?php echo $link['url']; ?></td>
@@ -74,17 +114,21 @@ include 'menu.php';
                                 <?php endforeach; ?>
                                 <?php else: ?>
                                 <tr>
-                                    <td colspan="5"><h6 class="typecho-list-table-title"><?php _e('没有任何链接'); ?></h6></td>
+                                    <td colspan="6"><h6 class="typecho-list-table-title"><?php _e('没有任何链接'); ?></h6></td>
                                 </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
+                        <div id="links-sort-loading" class="links-sort-loading" role="status" aria-live="polite" aria-hidden="true">
+                            <span class="links-sort-loading-spinner" aria-hidden="true"></span><?php _e('正在保存排序…'); ?>
+                        </div>
                     </div>
                     </form>
-				</div>
+                </div>
                 <div class="col-mb-12 col-tb-4" role="form">
                     <?php Links_Plugin::form()->render(); ?>
                 </div>
+                <?php endif; ?>
         </div>
     </div>
 </div>
@@ -94,10 +138,189 @@ include 'copyright.php';
 include 'common-js.php';
 ?>
 
+<style type="text/css">
+.links-sort-popup {
+    position: fixed;
+    top: 36px;
+    left: 0;
+    box-sizing: border-box;
+    z-index: 101;
+}
+
+#links-table-wrap {
+    position: relative;
+}
+
+#links-table-wrap.links-sort-saving::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(246, 246, 243, .65);
+    cursor: wait;
+}
+
+#links-table-wrap.links-sort-saving #links-table {
+    opacity: .65;
+}
+
+.links-sort-loading {
+    display: none;
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    left: 50%;
+    align-items: center;
+    padding: 8px 14px;
+    background: #fff;
+    color: #467b96;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+}
+
+#links-table-wrap.links-sort-saving .links-sort-loading {
+    display: flex;
+}
+
+.links-sort-loading-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+    border: 2px solid #c9dbe5;
+    border-top-color: #467b96;
+    border-radius: 50%;
+    animation: links-sort-loading-spin .8s linear infinite;
+}
+
+@keyframes links-sort-loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#links-table tbody tr {
+    cursor: grab;
+}
+
+#links-table tbody tr:active {
+    cursor: grabbing;
+}
+
+#links-table tbody tr:hover {
+    background-color: #f5faff;
+}
+
+#links-table tbody tr.links-row-dragging {
+    cursor: grabbing;
+    background-color: #e8f3ff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+}
+
+#links-table .links-sort-column,
+#links-table .links-sort-indicator {
+    width: 54px;
+    padding-left: 6px;
+    padding-right: 6px;
+    text-align: center;
+}
+
+#links-table .links-sort-column {
+    white-space: nowrap;
+}
+
+#links-table .links-sort-indicator {
+    color: #aeb8c2;
+    font-size: 18px;
+    line-height: 1;
+    user-select: none;
+}
+
+#links-table tbody tr:hover .links-sort-indicator {
+    color: #467b96;
+}
+
+</style>
+
+<?php if ('links' === $tab): ?>
 <script type="text/javascript">
 (function () {
     $(document).ready(function () {
-        var table = $('.typecho-list-table').tableDnD({
+        var sortSuccessMessage = <?php echo json_encode(_t('友情链接排序已保存')); ?>,
+            sortErrorMessage = <?php echo json_encode(_t('排序保存失败，请重试')); ?>,
+            pendingSortRequest = null;
+
+        function clearSortNotice() {
+            $('.links-sort-popup').stop(true, true).remove();
+        }
+
+        function showSortNotice(message, type) {
+            var head = $('.typecho-head-nav'),
+                notice = $('<div class="message popup ' + type + ' links-sort-popup"><ul><li></li></ul></div>');
+
+            clearSortNotice();
+            notice.find('li').text(message);
+            if (head.length > 0) {
+                notice.insertAfter(head);
+            } else {
+                notice.prependTo(document.body);
+            }
+
+            notice.slideDown(function () {
+                var current = $(this),
+                    color = '#C6D880';
+
+                if (current.hasClass('error')) {
+                    color = '#FBC2C4';
+                } else if (current.hasClass('notice')) {
+                    color = '#FFD324';
+                }
+
+                current.effect('highlight', {color : color})
+                    .delay(5000).fadeOut(function () {
+                    $(this).remove();
+                });
+            });
+        }
+
+        function setSortSaving(saving) {
+            var wrap = $('#links-table-wrap');
+
+            wrap.toggleClass('links-sort-saving', saving)
+                .attr('aria-busy', saving ? 'true' : 'false');
+            $('#links-sort-loading').attr('aria-hidden', saving ? 'false' : 'true');
+        }
+
+        function saveSort(ids) {
+            setSortSaving(true);
+
+            var request = $.post('<?php $options->index('/action/links-edit?do=sort'); ?>',
+                $.param({lid : ids}))
+                .done(function () {
+                    showSortNotice(sortSuccessMessage, 'success');
+                })
+                .fail(function () {
+                    showSortNotice(sortErrorMessage, 'error');
+                })
+                .always(function () {
+                    if (pendingSortRequest === request) {
+                        pendingSortRequest = null;
+                        setSortSaving(false);
+                    }
+                });
+
+            pendingSortRequest = request;
+        }
+
+        var table = $('#links-table').tableDnD({
+            onDragClass : 'links-row-dragging',
+            onDragStart : function () {
+                clearSortNotice();
+            },
             onDrop : function () {
                 var ids = [];
 
@@ -105,8 +328,9 @@ include 'common-js.php';
                     ids.push($(this).val());
                 });
 
-                $.post('<?php $options->index('/action/links-edit?do=sort'); ?>', 
-                    $.param({lid : ids}));
+                if (!pendingSortRequest) {
+                    saveSort(ids);
+                }
 
                 $('tr', table).each(function (i) {
                     if (i % 2) {
@@ -141,4 +365,5 @@ include 'common-js.php';
     });
 })();
 </script>
+<?php endif; ?>
 <?php include 'footer.php'; ?>

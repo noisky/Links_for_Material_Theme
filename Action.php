@@ -94,6 +94,49 @@ class Links_Action extends Typecho_Widget implements Widget_Interface_Do
         $this->response->redirect(Typecho_Common::url('extending.php?panel=Links%2Fmanage-links.php', $this->options->adminUrl));
     }
 
+    public function saveSettings()
+    {
+        Typecho_Widget::widget('Widget_Security')->protect();
+
+        $outputMode = (string) $this->request->get('outputMode');
+        if (!in_array($outputMode, array('order', 'daily', 'request'), true)) {
+            $outputMode = 'order';
+        }
+        $optionName = 'plugin:Links';
+        $option = $this->db->fetchRow($this->db->select()->from($this->prefix.'options')
+            ->where('name = ?', $optionName)->limit(1));
+        $settings = array(
+            'outputMode' => $outputMode,
+            // 保留旧字段，便于旧版本代码继续按每日随机配置工作。
+            'dailyRandom' => 'daily' === $outputMode ? '1' : '0'
+        );
+
+        if ($option && !empty($option['value'])) {
+            $storedSettings = json_decode($option['value'], true);
+            if (!is_array($storedSettings) && 0 === strpos($option['value'], 'a:')) {
+                $storedSettings = @unserialize($option['value']);
+            }
+            if (is_array($storedSettings)) {
+                $settings = array_merge($storedSettings, $settings);
+            }
+        }
+
+        if ($option) {
+            $this->db->query($this->db->update($this->prefix.'options')
+                ->rows(array('value' => json_encode($settings)))
+                ->where('name = ?', $optionName));
+        } else {
+            $this->db->query($this->db->insert($this->prefix.'options')->rows(array(
+                'name' => $optionName,
+                'value' => json_encode($settings),
+                'user' => 0
+            )));
+        }
+
+        $this->widget('Widget_Notice')->set(_t('友情链接设置已经保存'), NULL, 'success');
+        $this->response->redirect(Typecho_Common::url('extending.php?panel=Links%2Fmanage-links.php', $this->options->adminUrl));
+    }
+
     public function sortLink()
     {
         $links = $this->request->filter('int')->getArray('lid');
@@ -115,6 +158,7 @@ class Links_Action extends Typecho_Widget implements Widget_Interface_Do
 		$this->on($this->request->is('do=addhanny'))->addHannysBlog();
 		$this->on($this->request->is('do=update'))->updateLink();
 		$this->on($this->request->is('do=delete'))->deleteLink();
+		$this->on($this->request->is('do=save-settings'))->saveSettings();
 		$this->on($this->request->is('do=sort'))->sortLink();
 		$this->response->redirect($this->options->adminUrl);
 	}

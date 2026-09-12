@@ -1,51 +1,12 @@
 <?php
 /**
- * 基于 Hanny 修改的友情链接插件，能适应于 Material for Typecho.
+ * Typecho 友情链接插件，支持 Material Theme 卡片输出。
  * 
  * @package Links
- * @author Noisky & Hanny
- * @version 1.1.3
+ * @author 饭饭
+ * @version 1.2.0
  * @dependence 14.10.10-*
- * @link http://www.noisky.cn
- *
- * 历史版本
- *
- * version 1.1.3 at 2017-11-21
- * 修复越权漏洞
-
- * version 1.1.2 at 2016-10-19
- * 修复关闭插件后再次启动插件提示“数据表建立失败，友情链接插件启动失败。错误号：42S01”的错误。
-
- * version 1.1.1 at 2014-12-14
- * 修改支持Typecho 1.0
- * 修正Typecho 1.0下不能删除的BUG
-
- * version 1.1.0 at 2013-12-08
- * 修改支持Typecho 0.9
-
- * version 1.0.4 at 2010-06-30
- * 修正数据表的前缀问题
- * 在Pattern里加上所有的数据表字段
- 
- * version 1.0.3 at 2010-06-20
- * 修改图片链接的支持方式。
- * 增加链接分类功能
- * 增加自定义字段，以便用户自定义扩展
- * 增加多种链接输出方式。
- * 增加较详细的帮助文档
- * 增加在自定义页面引用标签，方便友情链接页面的引用
- *
- * version 1.0.2 at 2010-05-16
- * 增加SQLite支持
- *
- * version 1.0.1 at 2009-12-27
- * 增加显示链接描述
- * 增加首页链接数量限制功能
- * 增加图片链接功能
-
- * version 1.0.0 at 2009-12-12
- * 实现友情链接的基本功能
- * 包括: 添加 删除 修改 排序
+ * @link https://github.com/noisky/Links_for_Material_Theme
  */
 class Links_Plugin implements Typecho_Plugin_Interface
 {
@@ -258,6 +219,58 @@ class Links_Plugin implements Typecho_Plugin_Interface
 		return $link ? true : false;
 	}
 
+	/**
+	 * 获取友情链接输出模式
+	 *
+	 * @return string order|daily|request
+	 */
+	public static function getOutputMode()
+	{
+		$options = Typecho_Widget::widget('Widget_Options');
+		try {
+			$pluginOptions = $options->plugin('Links');
+			if (isset($pluginOptions->outputMode)) {
+				$outputMode = (string) $pluginOptions->outputMode;
+				if (in_array($outputMode, array('order', 'daily', 'request'), true)) {
+					return $outputMode;
+				}
+			}
+
+			// 兼容早期版本的每日随机配置。
+			if (isset($pluginOptions->dailyRandom) && '1' === (string) $pluginOptions->dailyRandom) {
+				return 'daily';
+			}
+		} catch (Exception $e) {
+			// 兼容旧版本已激活但尚未生成插件配置的安装。
+		}
+
+		return 'order';
+	}
+
+	/**
+	 * 按站点日期生成当天稳定的随机顺序
+	 *
+	 * @param array $links 友情链接列表
+	 * @return array
+	 */
+	private static function sortLinksDaily($links)
+	{
+		if (count($links) < 2) {
+			return $links;
+		}
+
+		$day = (new Typecho_Date())->format('Y-m-d');
+		$ordered = array();
+		foreach ($links as $link) {
+			$lid = (int) $link['lid'];
+			$key = hash('sha256', $day . '|' . $lid) . '|' . str_pad((string) $lid, 10, '0', STR_PAD_LEFT);
+			$ordered[$key] = $link;
+		}
+
+		ksort($ordered, SORT_STRING);
+		return array_values($ordered);
+	}
+
     /**
      * 控制输出格式
      */
@@ -288,6 +301,7 @@ class Links_Plugin implements Typecho_Plugin_Interface
 		$prefix = $db->getPrefix();
 		$options = Typecho_Widget::widget('Widget_Options');
 		$nopic_url = Typecho_Common::url('/usr/plugins/Links/nopic.png', $options->siteUrl);
+		$outputMode = Links_Plugin::getOutputMode();
 		$sql = $db->select()->from($prefix.'links');
 		if (!isset($sort) || $sort == "") {
 			$sort = NULL;
@@ -295,12 +309,22 @@ class Links_Plugin implements Typecho_Plugin_Interface
 		if ($sort) {
 			$sql = $sql->where('sort=?', $sort);
 		}
-		$sql = $sql->order($prefix.'links.order', Typecho_Db::SORT_ASC);
 		$links_num = intval($links_num);
-		if ($links_num > 0) {
+		if ('order' === $outputMode) {
+			$sql = $sql->order($prefix.'links.order', Typecho_Db::SORT_ASC);
+		}
+		if ($links_num > 0 && 'order' === $outputMode) {
 			$sql = $sql->limit($links_num);
 		}
 		$links = $db->fetchAll($sql);
+		if ('daily' === $outputMode) {
+			$links = Links_Plugin::sortLinksDaily($links);
+		} elseif ('request' === $outputMode) {
+			shuffle($links);
+		}
+		if ($links_num > 0 && 'order' !== $outputMode) {
+			$links = array_slice($links, 0, $links_num);
+		}
 		$str = "";
 		foreach ($links as $link) {
 			if ($link['image'] == NULL) {
