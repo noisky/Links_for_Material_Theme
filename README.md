@@ -11,6 +11,7 @@ Links for Material Theme 是一个 Typecho 友情链接插件，基于 Hanny 的
 - 支持按照后台排序、每日随机输出和每次随机输出。
 - 支持 PHP 方法和 `<links>` 标签输出。
 - 提供 `SHOW_TEXT`、`SHOW_IMG`、`SHOW_MIX` 和 `MATERIAL_SHOW` 格式，其中 `MATERIAL_SHOW` 会生成 `.link-box`、`.thumb`、`.content` 和 `.title` 卡片结构。
+- 新安装到 MySQL 时使用 InnoDB 引擎和 `utf8mb4` 字符集。
 
 ## 安装
 
@@ -22,6 +23,10 @@ git clone https://github.com/noisky/Links_for_Material_Theme.git Links
 ```
 
 或下载项目文件，将插件目录放入 `usr/plugins/Links`，然后在 Typecho 后台启用插件。
+
+插件启用时会根据当前数据库驱动读取对应的安装或升级 SQL 文件。若文件缺失、不可读或读取失败，启用过程会直接显示包含文件路径的错误信息，便于定位部署问题。
+
+> MySQL 的 InnoDB 和 `utf8mb4` 设置仅用于新建数据表，不会自动转换已有的友情链接表。已有安装如需迁移存储引擎或字符集，请先备份数据，再由数据库管理员单独处理。
 
 ## 后台管理
 
@@ -86,6 +91,11 @@ Links_Plugin::output($pattern = NULL, $links_num = 0, $sort = NULL);
 插件只负责输出卡片结构，卡片宽度、响应式列数、阴影、悬浮效果和深色模式由 Material Theme 的友情链接样式提供。使用 `MATERIAL_SHOW` 时，需要确保主题已加载对应样式。
 
 ## 版本记录
+
+### 1.2.1（2026-09-20）
+
+- MySQL 新安装改用 InnoDB 存储引擎和 `utf8mb4` 字符集。
+- 安装与升级 SQL 改为从插件目录定位，并在文件不可读或读取失败时给出明确错误。
 
 ### 1.2.0（2026-09-12）
 

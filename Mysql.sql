@@ -8,4 +8,4 @@ CREATE TABLE `typecho_links` (
   `user` varchar(200) default NULL COMMENT '自定义',
   `order` int(10) unsigned default '0' COMMENT 'links排序',
   PRIMARY KEY  (`lid`)
-) ENGINE=MYISAM  DEFAULT CHARSET=%charset%;
+) ENGINE=InnoDB DEFAULT CHARSET=%charset%;

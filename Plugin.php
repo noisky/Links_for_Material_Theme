@@ -4,7 +4,7 @@
  * 
  * @package Links
  * @author 饭饭
- * @version 1.2.0
+ * @version 1.2.1
  * @dependence 14.10.10-*
  * @link https://github.com/noisky/Links_for_Material_Theme
  */
@@ -66,9 +66,16 @@ class Links_Plugin implements Typecho_Plugin_Interface
 		$type = explode('_', $installDb->getAdapterName());
 		$type = array_pop($type);
 		$prefix = $installDb->getPrefix();
-		$scripts = file_get_contents('usr/plugins/Links/'.$type.'.sql');
+		$sqlFile = __DIR__ . '/' . $type . '.sql';
+		if (!is_readable($sqlFile)) {
+			throw new Typecho_Plugin_Exception('无法读取友情链接数据库安装文件：' . $sqlFile);
+		}
+		$scripts = file_get_contents($sqlFile);
+		if (false === $scripts) {
+			throw new Typecho_Plugin_Exception('读取友情链接数据库安装文件失败：' . $sqlFile);
+		}
 		$scripts = str_replace('typecho_', $prefix, $scripts);
-		$scripts = str_replace('%charset%', 'utf8', $scripts);
+		$scripts = str_replace('%charset%', 'utf8mb4', $scripts);
 		$scripts = explode(';', $scripts);
 		try {
 			foreach ($scripts as $script) {
@@ -102,9 +109,16 @@ class Links_Plugin implements Typecho_Plugin_Interface
 	
 	public static function linksUpdate($installDb, $type, $prefix)
 	{
-		$scripts = file_get_contents('usr/plugins/Links/Update_'.$type.'.sql');
+		$sqlFile = __DIR__ . '/Update_' . $type . '.sql';
+		if (!is_readable($sqlFile)) {
+			throw new Typecho_Plugin_Exception('无法读取友情链接数据库升级文件：' . $sqlFile);
+		}
+		$scripts = file_get_contents($sqlFile);
+		if (false === $scripts) {
+			throw new Typecho_Plugin_Exception('读取友情链接数据库升级文件失败：' . $sqlFile);
+		}
 		$scripts = str_replace('typecho_', $prefix, $scripts);
-		$scripts = str_replace('%charset%', 'utf8', $scripts);
+		$scripts = str_replace('%charset%', 'utf8mb4', $scripts);
 		$scripts = explode(';', $scripts);
 		try {
 			foreach ($scripts as $script) {
